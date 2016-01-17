@@ -13,16 +13,16 @@
 
 static struct {
    GLuint vbo, vao;
-   GLint n = 20;
-   std::ofstream fl;
+   GLint n = 10
    std::vector<GLfloat> vertices;
-   float colors[(20+1)*(20+1)*3];
+   float colors[(40+1)*(40+1)*3] {};
    glm::mat4 model, projection, view;
    float camera_pos[3], head[3], mouse_pos[2];
    float ke[3];
 //   std::vector<float> colors((50+1)*(50+1)*3);
    GLint PVM;
 } info;
+
 struct Object {
    float m;
    std::vector<double> pos;
@@ -69,7 +69,6 @@ class Simulate {
                objects[i].a[0] = objects[i].forces[0]/objects[i].m; objects[i].a[1] = objects[i].forces[1]/objects[i].m; objects[i].a[2] = objects[i].forces[2]/objects[i].m;
             }       
          }
-         info.fl<<info.ke[0]<<","<<info.ke[1]<<","<<info.ke[2]<<std::endl;
       }
 
       void forces() {
@@ -88,7 +87,7 @@ class Simulate {
                norm[1] = (objects[springs[i].connections[0]].pos[1]-objects[springs[i].connections[1]].pos[1])/cur_length;
                norm[2] = (objects[springs[i].connections[0]].pos[2]-objects[springs[i].connections[1]].pos[2])/cur_length;
 
-//               if (cur_length > 1.1*springs[i].rest_length) {
+//               if (cur_length > 2*springs[i].rest_length) {
 //                  objects.push_back(objects[springs[i].connections[1]]);
 //                  springs[i].connections[1] = objects.size()-1;
 //                  cur_length = pow(pow(objects[springs[i].connections[0]].pos[0]-objects[springs[i].connections[1]].pos[0], 2)+pow(objects[springs[i].connections[0]].pos[1]-objects[springs[i].connections[1]].pos[1], 2)+pow(objects[springs[i].connections[0]].pos[2]-objects[springs[i].connections[1]].pos[2], 2), 0.5);
@@ -121,7 +120,7 @@ void cloth (int n, float struc_k, float shear_k, float bend_k, float c, float m,
    if (mode == "square") {
       for (int j = 0; j < n+1; j++) {
          for (int i = 0; i < n+1; i++) {
-            if ((i == n) or (j == n) or (i == 0) or (j == 0)) {
+           if ((i==0) or (i==n) or (j==n) or (j==0)) {
                objects.push_back(Object {m, {dis * (i-n/2), 0, dis * (j-n/2)}, {0, 0, 0}, false, {0, 0, 0}, {0, 0, 0}});
             }
             else {
@@ -152,7 +151,7 @@ void cloth (int n, float struc_k, float shear_k, float bend_k, float c, float m,
    if (mode == "4 edges") {
       for (int j = 0; j < n+1; j++) {
          for (int i = 0; i < n+1; i++) {
-            if (((i == n) and (j == n)) or ((i == n) and (j == 0)) or ((i == 0) and (j == n)) or ((i == 0) and (j == 0))) {
+            if (((i == n) and (j == n)) or ((i == 0) and (j == n)) or ((i == n) and (j == 0)) or ((i == 0) and (j == 0))) {
                objects.push_back(Object {m, {dis * (i-n/2), 0, dis * (j-n/2)}, {0, 0, 0}, false, {0, 0, 0}, {0, 0, 0}});
             }
             else {
@@ -210,6 +209,12 @@ void cloth (int n, float struc_k, float shear_k, float bend_k, float c, float m,
          }
       }
    }
+   springs.push_back(Spring {shear_k, c, {1, n+1}, 0});
+   springs.push_back(Spring {shear_k, c, {n-1, 2*n+1}, 0});
+   springs.push_back(Spring {shear_k, c, {(n-1)*(n+1), n*(n+1)+1}, 0});
+   springs.push_back(Spring {shear_k, c, {(n-1)*(n+1)+n, n*(n+1)+n-1}, 0});
+//   springs.push_back(Spring {shear_k, c, {(n-1)*(n+1)+n, (n+1)*(n+1)-1}, 0});
+   
 }
 
 void read_shader_src(const char *fname, std::vector<char> &buffer);
@@ -259,7 +264,7 @@ int main () {
 
    std::vector<Object> objects;
    std::vector<Spring> springs;
-   Simulate sim {0.00001, 0.7, objects, springs};
+   Simulate sim {0.0009, 0.1, objects, springs};
    initialize(sim);
 
    glEnable(GL_DEPTH_TEST);
@@ -318,9 +323,7 @@ void initialize(Simulate &sim) {
    glGenVertexArrays(1, &info.vao);
    glBindVertexArray(info.vao);
 
-   info.fl.open("fl", std::ios::out);
-   info.fl.clear();
-   cloth (info.n, 0.01, 0.01, 0.01, 0.3, 1, 0.04, "4 edges", sim.objects, sim.springs);
+   cloth (info.n, 2, 1, 1, 0.3, 1, 0.075, "4 edges", sim.objects, sim.springs);
    sim.set_rest_length();
 
    for (int i = 0; i < (info.n+1)*(info.n+1); i++) {
@@ -341,7 +344,7 @@ void initialize(Simulate &sim) {
    glGenBuffers(1, &info.vbo);
 
    glBindBuffer(GL_ARRAY_BUFFER, info.vbo);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(info.colors) + sizeof(GLfloat) * info.vertices.size(), NULL, GL_DYNAMIC_DRAW);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * info.vertices.size() + sizeof(info.colors), NULL, GL_DYNAMIC_DRAW);
 
    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat)*info.vertices.size(), info.vertices.data());
 

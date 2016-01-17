@@ -202,10 +202,10 @@ void cloth (int n, float struc_k, float shear_k, float bend_k, float c, float m,
 int main () {
    std::vector<Object> objects;
    std::vector<Spring> springs;
-   Simulate sim {0.00001, 0.7, objects, springs};
+   Simulate sim {0.00098, 0.1, objects, springs};
    info.fl.open("fl.csv", std::ios::out);
    info.fl.clear();
-   cloth (info.n, 0.01, 0.01, 0.01, 0.3, 1, 0.04, "4 edges", sim.objects, sim.springs);
+   cloth (info.n, 10, 1, 1, 1, 1, 0.1, "4 edges", sim.objects, sim.springs);
    sim.set_rest_length();
    std::time_t t = std::time(NULL);
    int frame = 0;
