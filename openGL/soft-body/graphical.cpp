@@ -75,44 +75,9 @@ class Graphics {
       sim.init(time_step, std::vector<Object<T> > {}, std::vector<Spring<T> > {}, grav, drag_force);
    }
 
-   void cloth (int n, T struc_k, T shear_k, T bend_k, T c, T m, T dis, std::string mode, std::vector<std::vector<float>> fixed = {}) {
+   void cloth (int n, T struc_k, T shear_k, T bend_k, T c, T m, T dis, std::string mode) {
       colors.resize((n+1)*(n+1)*3);
       vertices.resize((n+1)*(n+1)*3);
-      if (mode == "free") {
-         T vel[3] = {0, 0, 0};
-         for (int j = 0; j < n+1; j++) {
-            for (int i = 0; i < n+1; i++) {
-              T pos[3] = {dis * (i-n/2), 0, dis * (j-n/2)};
-              for (int k = 0; k < fixed.size(); k++) {
-                  if ((fixed[k][0] == i) and (fixed[k][1] == j)) {
-                     sim.objects.push_back(Object<T> (m, pos, vel, false));
-                  }
-                  if (k == fixed.size()-1) {
-                     sim.objects.push_back(Object<T> (m, pos, vel, true));
-                  }
-              }
-
-               if (i < n) {
-                  sim.springs.push_back(Spring<T> {struc_k, c, {i+j*(n+1), i+1+j*(n+1)}});
-               }
-               if (j < n) {
-                  sim.springs.push_back(Spring<T> {struc_k, c, {i+j*(n+1), i+(j+1)*(n+1)}});
-               }
-               if (i < n-1) {
-                  sim.springs.push_back(Spring<T> {bend_k, c, {i+j*(n+1), i+2+j*(n+1)}});
-               }
-               if (j < n-1) {
-                  sim.springs.push_back(Spring<T> {bend_k, c, {i+j*(n+1), i+(j+2)*(n+1)}});
-               }
-               if ((0 < i) and (i < n) and (0 < j) and (j < n)) {
-                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i+1+(j+1)*(n+1)}});
-                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i+1+(j-1)*(n+1)}});
-                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i-1+(j+1)*(n+1)}});
-                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i-1+(j-1)*(n+1)}});
-               }
-            }
-         }
-      }
       if (mode == "square") {
          T vel[3] = {0, 0, 0};
          for (int j = 0; j < n+1; j++) {
@@ -361,10 +326,16 @@ class Graphics {
 //}
 
 int main () {
-   Graphics<float> gui(60.0f, 0, 36, 0.1);
+   //EDIT THESE
+   //gui (render_distance, start_position_x, start_position_y, start_position_z)
+   Graphics<float> gui(60, 0, 36, 0.1);
+   //window (width, height, red, green, blue (OUT OF 255))
    gui.window(700, 700);
+   //universe (timestep, force of gravity, drag force)
    gui.universe(1.0/50, 0.05, 1.01);
-   gui.cloth(25, 0.1, 0.1, 0.1, 0, 1, 1, "fixed");
+   //cloth(number of springs per size (MUST BE POSITIVE), spring constant between consecutive springs, spring constance between diagonal springs,spring constant between springs every two consecutive springs, damping, mass of verticies, distance between vertices, mode (4 edges or square)
+   gui.cloth(25, 0.1, 0.1, 0.1, 0, 1, 1, "4 edges");
+
    gui.initialize();
    gui.display();
 }
