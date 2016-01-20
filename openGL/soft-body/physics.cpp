@@ -1,222 +1,138 @@
+#include "physics.h"
 #include <iostream>
-#include <math.h>
-#include <vector>
-#include <fstream>
-#include <ctime>
+#include <cmath>
 #include <string>
 
-static struct {
-   int n = 20;
-   std::ofstream fl;
-   float ke[3];
-} info;
+template <class T>
+Object<T>::Object (T mass, T position[3], T velocity[3], bool dynamic_) {
+   Object<T>::m = mass;
 
-struct Object {
-   float m;
-   std::vector<double> pos;
-   std::vector<double> vel;
-   bool dynamic;
-   std::vector<double> forces;
-   std::vector<double> a;
-};
+   Object<T>::pos[0] = position[0]; 
+   Object<T>::pos[1] = position[1];
+   Object<T>::pos[2] = position[2];
+   Object<T>::pos_0[0] = position[0]; 
+   Object<T>::pos_0[1] = position[1];
+   Object<T>::pos_0[2] = position[2];
 
-struct Spring {
-   double k;
-   double c;
-   int connections[2];
-   double rest_length;
-};
+   Object<T>::vel[0] = velocity[0]; 
+   Object<T>::vel[1] = velocity[1];
+   Object<T>::vel[2] = velocity[2];
+   Object<T>::vel_0[0] = velocity[0]; 
+   Object<T>::vel_0[1] = velocity[1];
+   Object<T>::vel_0[2] = velocity[2];
 
-class Simulate {
-   public:
-      double g;
-      float dt;
-      std::vector<Object> objects;
-      std::vector<Spring> springs;
-         
-      void set_rest_length() {
-         for (int i = 0; i < springs.size(); i++) {
-            springs[i].rest_length = pow(pow(objects[springs[i].connections[0]].pos[0]-objects[springs[i].connections[1]].pos[0], 2)+pow(objects[springs[i].connections[0]].pos[1]-objects[springs[i].connections[1]].pos[1], 2)+pow(objects[springs[i].connections[0]].pos[2]-objects[springs[i].connections[1]].pos[2], 2), 0.5);
-         }
-      }
+   Object<T>::a[0] = 0;
+   Object<T>::a[1] = 0;
+   Object<T>::a[2] = 0;
+   Object<T>::forces[0] = 0;
+   Object<T>::forces[1] = 0;
+   Object<T>::forces[2] = 0;
 
-      void integrate() {
-         for (int i=0; i < objects.size(); i++) {
-            if (objects[i].dynamic) {
-               info.ke[0] += 0.5 * objects[i].m * (0.5 * dt * ((objects[i].forces[0]/objects[i].m) + objects[i].a[0]) * 0.5 * dt * ((objects[i].forces[0]/objects[i].m) + objects[i].a[0]) - objects[i].vel[0] * objects[i].vel[0]);
-               info.ke[1] += 0.5 * objects[i].m * (0.5 * dt * ((objects[i].forces[1]/objects[i].m) + objects[i].a[1]) * 0.5 * dt * ((objects[i].forces[1]/objects[i].m) + objects[i].a[1]) - objects[i].vel[1] * objects[i].vel[1]);
-               info.ke[2] += 0.5 * objects[i].m * (0.5 * dt * ((objects[i].forces[2]/objects[i].m) + objects[i].a[2]) * 0.5 * dt * ((objects[i].forces[2]/objects[i].m) + objects[i].a[2]) - objects[i].vel[2] * objects[i].vel[2]);
-               objects[i].vel[0] += 0.5 * dt * ((objects[i].forces[0]/objects[i].m) + objects[i].a[0]);
-               objects[i].vel[1] += 0.5 * dt * ((objects[i].forces[1]/objects[i].m) + objects[i].a[1]);
-               objects[i].vel[2] += 0.5 * dt * ((objects[i].forces[2]/objects[i].m) + objects[i].a[2]);
-               objects[i].pos[0] += 0.5 * objects[i].a[0]*dt*dt + objects[i].vel[0]*dt;
-               objects[i].pos[1] += 0.5 * objects[i].a[1]*dt*dt + objects[i].vel[1]*dt;
-               objects[i].pos[2] += 0.5 * objects[i].a[2]*dt*dt + objects[i].vel[2]*dt;
-               objects[i].forces[0] = 0; objects[i].forces[1] = 0; objects[i].forces[2] = 0;
-               objects[i].a[0] = objects[i].forces[0]/objects[i].m; objects[i].a[1] = objects[i].forces[1]/objects[i].m; objects[i].a[2] = objects[i].forces[2]/objects[i].m;
-            }       
-         }
-         info.fl<<info.ke[0]<<","<<info.ke[1]<<","<<info.ke[2]<<"\n";
-      }
+   Object<T>::dynamic = dynamic_;
+}
 
-      void forces() {
-         for (int i=0; i < objects.size(); i++) {
-            if (objects[i].dynamic) {
-               objects[i].forces[1] -= objects[i].m * g;
-            }
-         }
+template <class T> 
+void Simulate<T>::init (T time_step, std::vector< Object<T> > objects_, std::vector< Spring<T> > springs_, T grav, T drag_force) {
 
-         for (int i = 0; i < springs.size(); i++) {
-            if ((objects[springs[i].connections[0]].dynamic) or (objects[springs[i].connections[1]].dynamic)) {
-               double cur_length = pow(pow(objects[springs[i].connections[0]].pos[0]-objects[springs[i].connections[1]].pos[0], 2)+pow(objects[springs[i].connections[0]].pos[1]-objects[springs[i].connections[1]].pos[1], 2)+pow(objects[springs[i].connections[0]].pos[2]-objects[springs[i].connections[1]].pos[2], 2), 0.5);
+   //Manditory stuff we will always use:
+   Simulate<T>::objects = objects_;
+   Simulate<T>::dt = time_step;
 
-               double norm[3];
-               norm[0] = (objects[springs[i].connections[0]].pos[0]-objects[springs[i].connections[1]].pos[0])/cur_length;
-               norm[1] = (objects[springs[i].connections[0]].pos[1]-objects[springs[i].connections[1]].pos[1])/cur_length;
-               norm[2] = (objects[springs[i].connections[0]].pos[2]-objects[springs[i].connections[1]].pos[2])/cur_length;
+   //Optional
+   Simulate<T>::g = grav;
+   Simulate<T>::drag = drag_force;
+   Simulate<T>::springs = springs_;
+}
 
-//               if (cur_length > 1.1*springs[i].rest_length) {
-//                  objects.push_back(objects[springs[i].connections[1]]);
-//                  springs[i].connections[1] = objects.size()-1;
-//                  cur_length = pow(pow(objects[springs[i].connections[0]].pos[0]-objects[springs[i].connections[1]].pos[0], 2)+pow(objects[springs[i].connections[0]].pos[1]-objects[springs[i].connections[1]].pos[1], 2)+pow(objects[springs[i].connections[0]].pos[2]-objects[springs[i].connections[1]].pos[2], 2), 0.5);
-//
-//                  norm[0] = (objects[springs[i].connections[0]].pos[0]-objects[springs[i].connections[1]].pos[0])/cur_length;
-//                  norm[1] = (objects[springs[i].connections[0]].pos[1]-objects[springs[i].connections[1]].pos[1])/cur_length;
-//                  norm[2] = (objects[springs[i].connections[0]].pos[2]-objects[springs[i].connections[1]].pos[2])/cur_length;
-//               }
-
-               double dot = (objects[springs[i].connections[0]].vel[0]-objects[springs[i].connections[1]].vel[0]) * norm[0] + (objects[springs[i].connections[0]].vel[1]-objects[springs[i].connections[1]].vel[1]) * norm[1] + (objects[springs[i].connections[0]].vel[2]-objects[springs[i].connections[1]].vel[2]) * norm[2];
-
-               if (objects[springs[i].connections[0]].dynamic) {
-                  objects[springs[i].connections[0]].forces[0] -= (springs[i].k * (cur_length-springs[i].rest_length) + springs[i].c * dot) * norm[0];
-                  objects[springs[i].connections[0]].forces[1] -= (springs[i].k * (cur_length-springs[i].rest_length) + springs[i].c * dot) * norm[1];
-                  objects[springs[i].connections[0]].forces[2] -= (springs[i].k * (cur_length-springs[i].rest_length) + springs[i].c * dot) * norm[2];
-               }
-
-               if (objects[springs[i].connections[1]].dynamic) {
-                  objects[springs[i].connections[1]].forces[0] += (springs[i].k * (cur_length-springs[i].rest_length) + springs[i].c * dot) * norm[0];
-                  objects[springs[i].connections[1]].forces[1] += (springs[i].k * (cur_length-springs[i].rest_length) + springs[i].c * dot) * norm[1];
-                  objects[springs[i].connections[1]].forces[2] += (springs[i].k * (cur_length-springs[i].rest_length) + springs[i].c * dot) * norm[2];
-               }
-            }
-         }
-      }
-};
-
-
-void cloth (int n, float struc_k, float shear_k, float bend_k, float c, float m, float dis, std::string mode, std::vector<Object>& objects, std::vector<Spring>& springs) {
-   if (mode == "square") {
-      for (int j = 0; j < n+1; j++) {
-         for (int i = 0; i < n+1; i++) {
-            if ((i == n) or (j == n) or (i == 0) or (j == 0)) {
-               objects.push_back(Object {m, {dis * (i-n/2), 0, dis * (j-n/2)}, {0, 0, 0}, false, {0, 0, 0}, {0, 0, 0}});
-            }
-            else {
-               objects.push_back(Object {m, {dis * (i-n/2), 0, dis * (j-n/2)}, {0, 0, 0}, true, {0, 0, 0}, {0, 0, 0}});
-            }
-
-            if (i < n) {
-               springs.push_back(Spring {struc_k, c, {i+j*(n+1), i+1+j*(n+1)}, 0});
-            }
-            if (j < n) {
-               springs.push_back(Spring {struc_k, c, {i+j*(n+1), i+(j+1)*(n+1)}, 0});
-            }
-            if (i < n-1) {
-               springs.push_back(Spring {bend_k, c, {i+j*(n+1), i+2+j*(n+1)}, 0});
-            }
-            if (j < n-1) {
-               springs.push_back(Spring {bend_k, c, {i+j*(n+1), i+(j+2)*(n+1)}, 0});
-            }
-            if ((0 < i) and (i < n) and (0 < j) and (j < n)) {
-               springs.push_back(Spring {shear_k, c, {i+j*(n+1), i+1+(j+1)*(n+1)}, 0});
-               springs.push_back(Spring {shear_k, c, {i+j*(n+1), i+1+(j-1)*(n+1)}, 0});
-               springs.push_back(Spring {shear_k, c, {i+j*(n+1), i-1+(j+1)*(n+1)}, 0});
-               springs.push_back(Spring {shear_k, c, {i+j*(n+1), i-1+(j-1)*(n+1)}, 0});
-            }
-         }
-      }
+template <class T>
+void Simulate<T>::define_methods () {
+   if (g == 0) {
+      methods[0] = false;
+      std::cout<<"No down force"<<std::endl;
    }
-   if (mode == "4 edges") {
-      for (int j = 0; j < n+1; j++) {
-         for (int i = 0; i < n+1; i++) {
-            if (((i == n) and (j == n)) or ((i == n) and (j == 0)) or ((i == 0) and (j == n)) or ((i == 0) and (j == 0))) {
-               objects.push_back(Object {m, {dis * (i-n/2), 0, dis * (j-n/2)}, {0, 0, 0}, false, {0, 0, 0}, {0, 0, 0}});
-            }
-            else {
-               objects.push_back(Object {m, {dis * (i-n/2), 0, dis * (j-n/2)}, {0, 0, 0}, true, {0, 0, 0}, {0, 0, 0}});
-            }
-            if (i < n) {
-               springs.push_back(Spring {struc_k, c, {i+j*(n+1), i+1+j*(n+1)}, 0});
-            }
-            if (j < n) {
-               springs.push_back(Spring {struc_k, c, {i+j*(n+1), i+(j+1)*(n+1)}, 0});
-            }
-            if (i < n-1) {
-               springs.push_back(Spring {bend_k, c, {i+j*(n+1), i+2+j*(n+1)}, 0});
-            }
-            if (j < n-1) {
-               springs.push_back(Spring {bend_k, c, {i+j*(n+1), i+(j+2)*(n+1)}, 0});
-            }
-            if ((0 < i) and (i < n) and (0 < j) and (j < n)) {
-               springs.push_back(Spring {shear_k, c, {i+j*(n+1), i+1+(j+1)*(n+1)}, 0});
-               springs.push_back(Spring {shear_k, c, {i+j*(n+1), i+1+(j-1)*(n+1)}, 0});
-               springs.push_back(Spring {shear_k, c, {i+j*(n+1), i-1+(j+1)*(n+1)}, 0});
-               springs.push_back(Spring {shear_k, c, {i+j*(n+1), i-1+(j-1)*(n+1)}, 0});
-            }
-         }
-      }
+   else {
+      methods[0] = true;
    }
-   if (mode == "1 edge") {
-      for (int j = 0; j < n+1; j++) {
-         for (int i = 0; i < n+1; i++) {
-            if ((i == n) and (j == n)) {
-               objects.push_back(Object {m, {dis * (i-n/2), 0, dis * (j-n/2)}, {0, 0, 0}, false, {0, 0, 0}, {0, 0, 0}});
-            }
-            else {
-               objects.push_back(Object {m, {dis * (i-n/2), 0, dis * (j-n/2)}, {0, 0, 0}, true, {0, 0, 0}, {0, 0, 0}});
-            }
 
-            if (i < n) {
-               springs.push_back(Spring {struc_k, c, {i+j*(n+1), i+1+j*(n+1)}, 0});
-            }
-            if (j < n) {
-               springs.push_back(Spring {struc_k, c, {i+j*(n+1), i+(j+1)*(n+1)}, 0});
-            }
-            if (i < n-1) {
-               springs.push_back(Spring {bend_k, c, {i+j*(n+1), i+2+j*(n+1)}, 0});
-            }
-            if (j < n-1) {
-               springs.push_back(Spring {bend_k, c, {i+j*(n+1), i+(j+2)*(n+1)}, 0});
-            }
-            if ((0 < i) and (i < n) and (0 < j) and (j < n)) {
-               springs.push_back(Spring {shear_k, c, {i+j*(n+1), i+1+(j+1)*(n+1)}, 0});
-               springs.push_back(Spring {shear_k, c, {i+j*(n+1), i+1+(j-1)*(n+1)}, 0});
-               springs.push_back(Spring {shear_k, c, {i+j*(n+1), i-1+(j+1)*(n+1)}, 0});
-               springs.push_back(Spring {shear_k, c, {i+j*(n+1), i-1+(j-1)*(n+1)}, 0});
-            }
-         }
-      }
+   if (springs.size() == 0) {
+      methods[1] = false;
+      std::cout<<"No springs"<<std::endl;
+   }
+   else {
+      methods[1] = true;
+   }
+
+   if (drag == 0) {
+      methods[2] = false;
+      std::cout<<"No drag"<<std::endl;
+   }
+   else {
+      methods[2] = true;
+   }
+
+}
+
+template <class T>
+void Simulate<T>::assign_springs () {
+   for (int i = 0; i < springs.size(); i++) {
+      objects[springs[i].connections[0]].bound_to.push_back(springs[i].connections[1]);
+      objects[springs[i].connections[1]].bound_to.push_back(springs[i].connections[0]);
+      objects[springs[i].connections[0]].bound_by.push_back(i);
+      objects[springs[i].connections[1]].bound_by.push_back(i);
    }
 }
 
-int main () {
-   std::vector<Object> objects;
-   std::vector<Spring> springs;
-   Simulate sim {0.00098, 0.1, objects, springs};
-   info.fl.open("fl.csv", std::ios::out);
-   info.fl.clear();
-   cloth (info.n, 10, 1, 1, 1, 1, 0.1, "4 edges", sim.objects, sim.springs);
-   sim.set_rest_length();
-   std::time_t t = std::time(NULL);
-   int frame = 0;
-   while (true) {
-      sim.forces();
-      sim.integrate();
-      frame++;
-      if (std::time(NULL)-t >= 1) {
-         std::cout<<frame<<std::endl;
-         t = std::time(NULL);
-         frame = 0;
+template <class T>
+void Simulate<T>::integrate (int i) {
+   //v(t+1) = 1.2 * ^t * (a(t+1) + a(t))
+   objects[i].vel[0] += 0.5 * dt * ((objects[i].forces[0]/objects[i].m) + objects[i].a[0]);
+   objects[i].vel[1] += 0.5 * dt * ((objects[i].forces[1]/objects[i].m) + objects[i].a[1]);
+   objects[i].vel[2] += 0.5 * dt * ((objects[i].forces[2]/objects[i].m) + objects[i].a[2]);
+
+   //x[i](t) = 1/2 * a(t) * ^t**2 + v(t+1) * ^t
+   objects[i].pos[0] += 0.5 * objects[i].a[0]*dt*dt + objects[i].vel[0]*dt;
+   objects[i].pos[1] += 0.5 * objects[i].a[1]*dt*dt + objects[i].vel[1]*dt;
+   objects[i].pos[2] += 0.5 * objects[i].a[2]*dt*dt + objects[i].vel[2]*dt;
+
+   //Setting previous values of accel. for Verlet integrator
+   objects[i].a[0] = objects[i].forces[0]/objects[i].m;
+   objects[i].a[1] = objects[i].forces[1]/objects[i].m;
+   objects[i].a[2] = objects[i].forces[2]/objects[i].m;
+
+   //Reseting Forces
+   objects[i].forces[0] = 0;
+   objects[i].forces[1] = 0;
+   objects[i].forces[2] = 0;
+}
+
+template <class T>
+void Simulate<T>::forces (int i) {
+   //Methods: [grav, springs, drag]
+   
+   //if gravity: F(t+1)[1] = F(t)[1] - m*g
+   if (methods[0]) { 
+      objects[i].forces[1] -= objects[i].m * g;
+   }
+
+   //if springs: F(t+1) = F(t) - k * ((x_connected(t)-x(t))
+   //- (x0_connected(t)-x0(t))
+   if (methods[1]) {
+      for (int x = 0; x < objects[i].bound_by.size(); x++) {
+         objects[i].forces[0] += springs[objects[i].bound_by[x]].k * ((objects[objects[i].bound_to[x]].pos[0] - objects[i].pos[0]) - (objects[objects[i].bound_to[x]].pos_0[0] - objects[i].pos_0[0])/2);
+//         objects[i].forces[0] += springs[objects[i].bound_by[x]].c * ((objects[objects[i].bound_to[x]].vel[0] - objects[i].vel[0]) - (objects[objects[i].bound_to[x]].vel_0[0] - objects[i].vel_0[0])/2);
+
+         objects[i].forces[1] += springs[objects[i].bound_by[x]].k * ((objects[objects[i].bound_to[x]].pos[1] - objects[i].pos[1]) - (objects[objects[i].bound_to[x]].pos_0[1] - objects[i].pos_0[1])/2);
+//         objects[i].forces[1] += springs[objects[i].bound_by[x]].c * ((objects[objects[i].bound_to[x]].vel[1] - objects[i].vel[1]) - (objects[objects[i].bound_to[x]].vel_0[1] - objects[i].vel_0[1])/2);
+
+         objects[i].forces[2] += springs[objects[i].bound_by[x]].k * ((objects[objects[i].bound_to[x]].pos[2] - objects[i].pos[2]) - (objects[objects[i].bound_to[x]].pos_0[2] - objects[i].pos_0[2])/2);
+ //        objects[i].forces[2] += springs[objects[i].bound_by[x]].c * ((objects[objects[i].bound_to[x]].vel[2] - objects[i].vel[2]) - (objects[objects[i].bound_to[x]].vel_0[2] - objects[i].vel_0[2])/2);
       }
+   }
+
+   //if drag: f(t) = v(t)/drag
+   if (methods[2]) {
+      objects[i].vel[0] /= drag;
+      objects[i].vel[1] /= drag;
+      objects[i].vel[2] /= drag;
    }
 }

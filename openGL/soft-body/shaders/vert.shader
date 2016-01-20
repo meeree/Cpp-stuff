@@ -1,11 +1,12 @@
 #version 150
 
+in vec3 vert_color;
+out vec4 frag_color;
+
 in vec4 position;
-in vec4 color;
-out vec4 color_from_vshader;
 uniform mat4 PVM;
 
 void main() {
    gl_Position = PVM * position;
-   color_from_vshader = color;
+   frag_color = vec4(vert_color.xyz, 1);
 }
