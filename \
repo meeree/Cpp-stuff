@@ -1,0 +1,128 @@
+//neural.cpp
+#include <vector>
+#include <iostream>
+#include <cmath>
+#include <cassert>
+
+struct Synapse {
+   //connection indices between two neurons 
+   unsigned connection[2];
+
+   //synapse weight
+   double weight;
+};
+
+class Neuron;
+
+//each layer will hold the synapses and neurons in that layer
+struct Layer {
+   std::vector<Neuron> neurons;
+   std::vector<Synapse> synapses;
+};
+
+//NEURON CLASS
+class Neuron {
+public:
+   Neuron() {m_input=0;}
+   void addOutput(const double &input) {m_input += input;}
+   void applyFunc();
+   void weightOutput(const double &weight) {m_output = m_input * weight;}
+   double getOutput() const {return m_output;}
+private:
+   double m_input;
+   double m_output;
+};
+
+void Neuron::applyFunc() {
+   m_input = 1/(1+exp(-m_input));
+}
+
+//NET CLASS
+class Net {
+public:
+   Net(std::vector<unsigned> const &topology, std::vector<std::vector<Synapse> > const &synapseLayers);
+   void feedForward(std::vector<double> &inputVals);
+   void backProp(std::vector<double> &targetVals);
+private:
+   std::vector<Layer> m_layers;
+   std::vector<double> m_output;
+};
+
+Net::Net(std::vector<unsigned> const &topology, std::vector<std::vector<Synapse> > const &synapseLayers) {
+   for (unsigned l=0; l < topology.size(); l++) {
+      m_layers.push_back(Layer {{}, {}});
+   
+      //place neurons
+      for (unsigned n=0; n < topology[l]; n++) {
+         m_layers.back().neurons.push_back(Neuron());
+      }
+
+      //place bias neurons and synapses on all layers but end
+      if (l < topology.size()-1) {
+         m_layers.back().neurons.push_back(Neuron());
+         m_layers.back().neurons.back().addOutput(1);
+
+         for (auto const &syn: synapseLayers[l]) {
+            m_layers.back().synapses.push_back(syn);
+         }
+      }
+   }
+   assert(m_layers.size() == topology.size());
+}
+
+void Net::feedForward(std::vector<double> &inputVals) {
+   assert(inputVals.size() == m_layers[0].neurons.size()-1);
+   for (unsigned n=0; n < m_layers[0].neurons.size(); n++) {
+      m_layers[0].neurons[n].addOutput(inputVals[n]);
+   }
+
+   for (unsigned l=0; l < m_layers.size()-1; l++) {
+      for (auto const &syn: m_layers[l].synapses) {
+         Neuron &outputNeuron = m_layers[l].neurons[syn.connection[0]];
+         Neuron &inputNeuron = m_layers[l+1].neurons[syn.connection[1]];
+         outputNeuron.weightOutput(syn.weight);
+         inputNeuron.addOutput(outputNeuron.getOutput());
+         std::cout<<"layers: "<<l<<"rank: "<<syn.connection[0]<<", "<<outputNeuron.getOutput()<<std::endl;
+      }
+      
+      for (unsigned n=0 ; n < m_layers[l+1].neurons.size() -1; n++) {
+         m_layers[l+1].neurons[n].applyFunc();
+      }
+   }
+   for (auto &nrn: m_layers.back().neurons) {
+      //setting final input to output
+      nrn.weightOutput(1);
+      m_output.push_back(nrn.getOutput());
+      std::cout<<nrn.getOutput()<<std::endl;
+   }
+}
+
+
+void backProp(std::vector<double> &targetVals) {
+   //calulate error
+}
+   
+
+int main () {
+   std::vector<unsigned> topology {3, 3, 3, 1};
+   std::vector<std::vector<Synapse> > synapseLayers {};
+   double weight = 0.75;
+   double bias = 2;
+
+   for (unsigned l=0; l < topology.size()-1; l++) {
+      synapseLayers.push_back({});
+      for (unsigned t=0; t < topology[l]+1; t++) {
+         for (unsigned tn=0; tn < topology[l+1]; tn++) {
+            if (t == topology[l]) {
+               synapseLayers.back().push_back(Synapse {{t, tn}, bias});
+            }
+            else {
+               synapseLayers.back().push_back(Synapse {{t, tn}, weight});
+            }
+         }
+      }
+   }
+   std::vector<double> inputVals {1, 2, 3};
+   Net net (topology, synapseLayers);
+   net.feedForward(inputVals);
+}

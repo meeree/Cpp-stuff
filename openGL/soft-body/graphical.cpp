@@ -79,75 +79,71 @@ class Graphics {
       colors.resize((n+1)*(n+1)*3);
       vertices.resize((n+1)*(n+1)*3);
       if (mode == "square") {
-         T vel[3] = {0, 0, 0};
          for (int j = 0; j < n+1; j++) {
             for (int i = 0; i < n+1; i++) {
-              T pos[3] = {dis * (i-n/2), 0, dis * (j-n/2)};
-              if ((i==0) or (i==n) or (j==n) or (j==0)) {
-                  sim.objects.push_back(Object<T> (m, pos, vel, false));
+               if ((i==0) or (i==n) or (j==n) or (j==0)) {
+                  sim.objects.push_back(Object<T> {m, {dis * (i-n/2), 0, dis * (j-n/2)}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, false} );
                }
                else {
-                  sim.objects.push_back(Object<T> (m, pos, vel, true));
+                  sim.objects.push_back(Object<T> {m, {dis * (i-n/2), 0, dis * (j-n/2)}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, true} );
                }
 
                if (i < n) {
-                  sim.springs.push_back(Spring<T> {struc_k, c, {i+j*(n+1), i+1+j*(n+1)}});
+                  sim.springs.push_back(Spring<T> {struc_k, c, {i+j*(n+1), i+1+j*(n+1)}, 0, 0});
                }
                if (j < n) {
-                  sim.springs.push_back(Spring<T> {struc_k, c, {i+j*(n+1), i+(j+1)*(n+1)}});
+                  sim.springs.push_back(Spring<T> {struc_k, c, {i+j*(n+1), i+(j+1)*(n+1)}, 0, 0});
                }
                if (i < n-1) {
-                  sim.springs.push_back(Spring<T> {bend_k, c, {i+j*(n+1), i+2+j*(n+1)}});
+                  sim.springs.push_back(Spring<T> {bend_k, c, {i+j*(n+1), i+2+j*(n+1)}, 0, 0});
                }
                if (j < n-1) {
-                  sim.springs.push_back(Spring<T> {bend_k, c, {i+j*(n+1), i+(j+2)*(n+1)}});
+                  sim.springs.push_back(Spring<T> {bend_k, c, {i+j*(n+1), i+(j+2)*(n+1)}, 0, 0});
                }
                if ((0 < i) and (i < n) and (0 < j) and (j < n)) {
-                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i+1+(j+1)*(n+1)}});
-                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i+1+(j-1)*(n+1)}});
-                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i-1+(j+1)*(n+1)}});
-                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i-1+(j-1)*(n+1)}});
+                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i+1+(j+1)*(n+1)}, 0, 0});
+                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i+1+(j-1)*(n+1)}, 0, 0});
+                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i-1+(j+1)*(n+1)}, 0, 0});
+                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i-1+(j-1)*(n+1)}, 0, 0});
                }
             }
          }
       }
       if (mode == "4 edges") {
-         T vel[3] = {0, 0, 0};
          for (int j = 0; j < n+1; j++) {
             for (int i = 0; i < n+1; i++) {
-              T pos[3] = {dis * (i-n/2), 0, dis * (j-n/2)};
-              if (((i==0) and (j==0)) or ((i==n) and (j==0)) or ((i==0) and (j==n)) or ((i==n) and (j==n))) {
-                  sim.objects.push_back(Object<T> (m, pos, vel, false));
+               if (((i==0) and (j==0)) or ((i==n) and (j==0)) or ((i==0) and (j==n)) or ((i==n) and (j==n))) {
+                  sim.objects.push_back(Object<T> {m, {dis * (i-n/2), 0, dis * (j-n/2)}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, false} );
                }
                else {
-                  sim.objects.push_back(Object<T> (m, pos, vel, true));
+                  sim.objects.push_back(Object<T> {m, {dis * (i-n/2), 0, dis * (j-n/2)}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}, true} );
                }
 
                if (i < n) {
-                  sim.springs.push_back(Spring<T> {struc_k, c, {i+j*(n+1), i+1+j*(n+1)}});
+                  sim.springs.push_back(Spring<T> {struc_k, c, {i+j*(n+1), i+1+j*(n+1)}, 0, 0});
                }
                if (j < n) {
-                  sim.springs.push_back(Spring<T> {struc_k, c, {i+j*(n+1), i+(j+1)*(n+1)}});
+                  sim.springs.push_back(Spring<T> {struc_k, c, {i+j*(n+1), i+(j+1)*(n+1)}, 0, 0});
                }
                if (i < n-1) {
-                  sim.springs.push_back(Spring<T> {bend_k, c, {i+j*(n+1), i+2+j*(n+1)}});
+                  sim.springs.push_back(Spring<T> {bend_k, c, {i+j*(n+1), i+2+j*(n+1)}, 0, 0});
                }
                if (j < n-1) {
-                  sim.springs.push_back(Spring<T> {bend_k, c, {i+j*(n+1), i+(j+2)*(n+1)}});
+                  sim.springs.push_back(Spring<T> {bend_k, c, {i+j*(n+1), i+(j+2)*(n+1)}, 0, 0});
                }
                if ((0 < i) and (i < n) and (0 < j) and (j < n)) {
-                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i+1+(j+1)*(n+1)}});
-                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i+1+(j-1)*(n+1)}});
-                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i-1+(j+1)*(n+1)}});
-                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i-1+(j-1)*(n+1)}});
+                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i+1+(j+1)*(n+1)}, 0, 0});
+                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i+1+(j-1)*(n+1)}, 0, 0});
+                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i-1+(j+1)*(n+1)}, 0, 0});
+                  sim.springs.push_back(Spring<T> {shear_k, c, {i+j*(n+1), i-1+(j-1)*(n+1)}, 0, 0});
                }
             }
          }
       }
-      sim.springs.push_back(Spring<T> {shear_k, c, {1, n+1}});
-      sim.springs.push_back(Spring<T> {shear_k, c, {n-1, 2*n+1}});
-      sim.springs.push_back(Spring<T> {shear_k, c, {(n-1)*(n+1), n*(n+1)+1}});
-      sim.springs.push_back(Spring<T> {shear_k, c, {n*(n+1)-1, n*(n+1)+n-1}});
+      sim.springs.push_back(Spring<T> {shear_k, c, {1, n+1}, 0, 0});
+      sim.springs.push_back(Spring<T> {shear_k, c, {n-1, 2*n+1}, 0, 0});
+      sim.springs.push_back(Spring<T> {shear_k, c, {(n-1)*(n+1), n*(n+1)+1}, 0, 0});
+      sim.springs.push_back(Spring<T> {shear_k, c, {n*(n+1)-1, n*(n+1)+n-1}, 0, 0});
       sim.assign_springs();
    }
 
@@ -206,7 +202,7 @@ class Graphics {
       return shaderProgram;
    }
 
-   void initialize() {
+   void initialize(float lnr=0, float lng=0, float lnb=0 ) {
       glGenVertexArrays(1, &vao);
       glBindVertexArray(vao);
 
@@ -231,6 +227,17 @@ class Graphics {
 
       sim.define_methods();
       int index = 0;
+
+      for (int i = 0; i < colors.size()/3; i++) {
+         colors[index] = lnr;
+         index++;
+         colors[index] = lng;
+         index++;
+         colors[index] = lnb;
+         index++;
+      }
+      
+      index = 0;
       GLuint indices[2*sim.springs.size()];
       for (int i = 0; i < sim.springs.size(); i++) {
          indices[index] = sim.springs[i].connections[0];
@@ -257,19 +264,20 @@ class Graphics {
       while(running) {
          glUniformMatrix4fv(PVM, 1, GL_FALSE, glm::value_ptr(projection * view * model));
          index = 0;
+         for (int i = 0; i < sim.springs.size(); i++) {
+            sim.spring_forces(i);
+         }
          for (int i = 0; i < sim.objects.size(); i++) {
             if (sim.objects[i].dynamic) {
                sim.forces(i);
                sim.integrate(i);
             }
             vertices[index] = sim.objects[i].pos[0];
-            colors[index] = pow(fmod(sim.objects[i].pos[1], 1)-1, 2);
+//            colors[index] = fmod(fabs(sim.objects[i].pos[1]), 1);
             index++;
             vertices[index] = sim.objects[i].pos[1];
-            colors[index] = pow(fmod(sim.objects[i].pos[1], 1)-1, 2);
             index++;
             vertices[index] = sim.objects[i].pos[2];
-            colors[index] = pow(fmod(sim.objects[i].pos[1], 1)-1, 2);
             index++;
          }
 
@@ -328,14 +336,15 @@ class Graphics {
 int main () {
    //EDIT THESE
    //gui (render_distance, start_position_x, start_position_y, start_position_z)
-   Graphics<float> gui(60, 0, 36, 0.1);
+   Graphics<float> gui(15, 0, 1, -6);
    //window (width, height, red, green, blue (OUT OF 255))
    gui.window(700, 700);
    //universe (timestep, force of gravity, drag force)
-   gui.universe(1.0/50, 0.05, 1.01);
+   gui.universe(1.0/10, 0.009, 1.04);
    //cloth(number of springs per size (MUST BE POSITIVE), spring constant between consecutive springs, spring constance between diagonal springs,spring constant between springs every two consecutive springs, damping, mass of verticies, distance between vertices, mode (4 edges or square)
-   gui.cloth(25, 0.1, 0.1, 0.1, 0, 1, 1, "4 edges");
+   gui.cloth(40, 1, 1, 1, 0, 1, 0.1, "4 edges");
 
-   gui.initialize();
+   //initialize(springs red, springs green, springs blue)
+   gui.initialize(1, 0, 0);
    gui.display();
 }
