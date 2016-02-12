@@ -92,7 +92,6 @@ void Net::forwardFeed(std::vector<double> const &inputs) {
          Neuron &outNeuron = m_neurons[l][ax.connection[0]];
          Neuron &inNeuron = m_neurons[l+1][ax.connection[1]];
          inNeuron.propagate( ax.sendOutput( outNeuron.output() ));
-//         std::cout<<"layer: "<<l<<", rank: "<<ax.connection[0]<<", output: "<<ax.sendOutput(outNeuron.output())<<", to: "<<ax.connection[1]<<std::endl;
       }
    
       for (unsigned n=0; n < m_neurons[l+1].size()-1; n++) {
@@ -108,7 +107,7 @@ void Net::forwardFeed(std::vector<double> const &inputs) {
 int main () {
    std::vector<std::vector<Neuron> > neurons;
    std::vector<std::vector<Axon> > axons;
-   std::vector<unsigned> topology {1, 100, 70, 20, 1};
+   std::vector<unsigned> topology {1, 50, 50, 50, 1};
 
    double bias = 1;
    double weight = -1;
