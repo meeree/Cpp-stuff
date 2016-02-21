@@ -5,9 +5,8 @@
 //particle struct>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 
 
 struct particle {
-   double mPos[3], mDis[3], mVel[3], mOmega[3], mForce[3], mTorque[3];
+   double mPos[3], mDis[3], mDis0[3], mOmega[3], mForce[3], mTorque[3];
    bool mDynamic;
-   double mMagDis;
    double mRot[3][3];
 };
 
@@ -22,8 +21,13 @@ struct object {
    bool mDynamic;
    double mPos[3], mVel[3], mForce[3];
    virtual void applyTorque () {
-
-   };
+      for (auto &iPart: mParticles) {
+         iPart->mTorque[0] = iPart->mForce[1] * iPart->mDis[2] - iPart->mForce[2] * iPart->mDis[1];
+         iPart->mTorque[1] = iPart->mForce[2] * iPart->mDis[0] - iPart->mForce[0] * iPart->mDis[2];
+         iPart->mTorque[2] = iPart->mForce[0] * iPart->mDis[1] - iPart->mForce[1] * iPart->mDis[0];
+         std::cout<<iPart->mTorque[0]<<","<<iPart->mTorque[1]<<","<<iPart->mTorque[2]<<std::endl<<std::endl;
+      }
+   }
 };
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -36,14 +40,16 @@ struct pointMass : public object {
       mDynamic = dynamic;
       for (unsigned iComp=0; iComp < 3; iComp++) {
          particle->mPos[iComp] = pos[iComp];
+         particle->mDis0[iComp] = 0;
          particle->mDis[iComp] = 0;
          mPos[iComp] = pos[iComp];
-         mVel[iComp] = 0;
          mForce[iComp] = force[iComp];
       }
-      particle->mDynamic = dynamic;
+
+      mDynamic = dynamic;
       mParticles = {particle};
    }
+   void applyTorque () {};
 };
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -101,21 +107,47 @@ private:
 
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
+//force >> applied>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+struct applied : public force {
+   applied (particle* particleOne, double const &kApp, std::vector<unsigned> const &dims) {
+      mKapp = kApp;
+      mParticleOne = particleOne;
+      mDims = dims;
+   }
+
+   void applyForce () {
+      for (auto const &dim: mDims) {
+         mParticleOne->mForce[dim] += mKapp;
+      }
+   }
+
+private:
+   double mKapp;
+   particle* mParticleOne;
+   std::vector<unsigned> mDims;
+};
+
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
 //force >> spring>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 struct spring : public force {
-   spring (particle* particleOne, particle* particleTwo, double const &kSpring, double const &kDamp) {
+   spring (object* objectOne, unsigned const &iPartOne, object* objectTwo, unsigned const &iPartTwo, double const &kSpring, double const &kDamp) {
 
       mKspring = kSpring;
       mKdamp = kDamp;
-      mParticleOne = particleOne;
-      mParticleTwo = particleTwo;
+      mObjectOne = objectOne;
+      mObjectTwo = objectTwo;
+
+      mParticleOne = objectOne->mParticles[iPartOne];
+      mParticleTwo = objectTwo->mParticles[iPartTwo];
 
       //Setting deltaX0 and rest length
       mRestLength = 0;
       for (unsigned iComp=0; iComp < 3; iComp++) {
-         mRestLength += pow(particleOne->mPos[iComp] - particleTwo->mPos[iComp], 2);
-         mDeltaX0[iComp] = particleOne->mPos[iComp] - particleTwo->mPos[iComp];
+         mRestLength += pow(mParticleOne->mPos[iComp] - mParticleTwo->mPos[iComp], 2);
+         mDeltaX0[iComp] = mParticleOne->mPos[iComp] - mParticleTwo->mPos[iComp];
       }
       mRestLength = sqrt(mRestLength);
       mRestLength = 0;
@@ -127,7 +159,7 @@ struct spring : public force {
       for (unsigned iComp=0; iComp < 3; iComp++) {
          mCurLength += pow(mParticleOne->mPos[iComp] - mParticleTwo->mPos[iComp], 2);
          mDeltaX[iComp] = mParticleOne->mPos[iComp] - mParticleTwo->mPos[iComp];
-         mDeltaV[iComp] = mParticleOne->mVel[iComp] - mParticleTwo->mVel[iComp];
+         mDeltaV[iComp] = mObjectOne->mVel[iComp] - mObjectTwo->mVel[iComp];
          mDot += mDeltaV[iComp] * mDeltaX[iComp];
       }
       mCurLength = sqrt(mCurLength);
@@ -137,10 +169,12 @@ struct spring : public force {
       //F = -[ks(mag(deltaX) - mag(deltaX0)) + kd((deltaX. deltaV)/mag(deltaX))] * deltaX/mag(deltaX)
       for (unsigned iComp=0; iComp < 3; iComp++) {
          double const &force = (mKspring * (mCurLength - mRestLength) + mKdamp * (mDot / mCurLength)) * mDeltaX[iComp] / mCurLength;
-         if (mParticleOne->mDynamic) {
+         if (mObjectOne->mDynamic) {
+            mObjectOne->mForce[iComp] -= force;
             mParticleOne->mForce[iComp] -= force;
          }
-         if (mParticleTwo->mDynamic) {
+         if (mObjectTwo->mDynamic) {
+            mObjectTwo->mForce[iComp] += force;
             mParticleTwo->mForce[iComp] += force;
          }
       }
@@ -149,6 +183,8 @@ struct spring : public force {
 private:
    double mDeltaX0[3], mDeltaX[3], mDeltaV[3];
    double mRestLength, mCurLength, mDot, mKdamp, mKspring;
+   object* mObjectOne;
+   object* mObjectTwo;
    particle* mParticleOne;
    particle* mParticleTwo;
 };
@@ -182,12 +218,22 @@ public:
       for (auto &iObj: mObjects) {
          if (iObj->mDynamic) {
             for (unsigned iComp=0; iComp < 3; iComp++) {
+               //translational on object
                iObj->mVel[iComp] += (iObj->mForce[iComp] / iObj->mMass) * mDt;
                iObj->mPos[iComp] += iObj->mVel[iComp] * mDt;
                for (auto &iPart: iObj->mParticles) {
-                     iPart->mVel[iComp] += iObj->mForce[iComp] + (iPart->mForce[iComp] / iObj->mMass) * mDt;
-                     iPart->mPos[iComp] += iPart->mVel[iComp] * mDt;
-                     iPart->mForce[iComp] = 0;
+                  //rotational on particles
+                  iPart->mOmega[iComp] += iPart->mTorque[iComp] * mDt;
+                  iPart->mOmega[iComp] = iPart->mOmega[0]*iObj->mIinv[iComp][0] + iPart->mOmega[1]*iObj->mIinv[iComp][1] + iPart->mOmega[2]*iObj->mIinv[iComp][2];
+                  iPart->mRot[0][iComp] += mDt * (-iPart->mOmega[2] * iPart->mRot[1][iComp] + iPart->mOmega[1] * iPart->mRot[2][iComp]);
+                  iPart->mRot[1][iComp] += mDt * (iPart->mOmega[2] * iPart->mRot[0][iComp] - iPart->mOmega[0] * iPart->mRot[2][iComp]);
+                  iPart->mRot[2][iComp] += mDt * (-iPart->mOmega[1] * iPart->mRot[0][iComp] + iPart->mOmega[0] * iPart->mRot[1][iComp]);
+
+                  //translational on particles
+                  iPart->mDis[iComp] = iPart->mRot[iComp][0] * iPart->mDis0[0] + iPart->mRot[iComp][1] * iPart->mDis0[1] + iPart->mRot[iComp][2] * iPart->mDis0[2];
+                  iPart->mPos[iComp] = iObj->mPos[iComp] + iPart->mDis[iComp];
+                  iPart->mForce[iComp] = 0;
+                  std::cout<<iPart->mPos[iComp]<<std::endl;
                }
                iObj->mForce[iComp] = 0;
             }
@@ -199,7 +245,6 @@ public:
    void update() {
       updateForcesAndTorques();
       integrate();
-      std::cout<<mObjects[0]->mPos[1]<<std::endl;
    }
 
 private:
@@ -216,7 +261,8 @@ int main () {
    particle part;
    pointMass p (mass, pos, &part);
    gravity grav (&p, 9.8);
-   jEng jamie ({&p}, {&grav}, 0.1);
+   applied app (&part, 5, {1});
+   jEng jamie ({&p}, {&grav, &app}, 0.1);
    for (unsigned i=0; i < 10; i++) {
       jamie.update();
    }
