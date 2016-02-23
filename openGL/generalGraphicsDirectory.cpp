@@ -35,11 +35,11 @@ void initializePrograms(GLint const &width, GLint const &height, bool const &ful
    glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 3); /* Telling glfw openGL version is 3.2 */
    glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 2);
 
-   if ((fullScreen) && (!glfwOpenWindow(width, height, redBits, greenBits, blueBits, 0, 8, 0, GLFW_FULLSCREEN)) ) { /* Open fullscreen glfw window */
+   if ((fullScreen) && (!glfwOpenWindow(width, height, redBits, greenBits, blueBits, 8, 8, 8, GLFW_FULLSCREEN)) ) { /* Open fullscreen glfw window */
       std::cerr << "Failed to open a window" << std::endl;
       glfwTerminate();
       exit(-1);
-   } else if ( !glfwOpenWindow(width, height, redBits, greenBits, blueBits, 0, 8, 0, GLFW_WINDOW)) { /* Open windowed mode glfw window */
+   } else if ( !glfwOpenWindow(width, height, redBits, greenBits, blueBits, 8, 8, 8, GLFW_WINDOW)) { /* Open windowed mode glfw window */
       std::cerr << "Failed to open a window" << std::endl;
       glfwTerminate();
       exit(-1);
@@ -123,7 +123,53 @@ GLuint shaders(char const *pathToVertShader, char const *pathToFragShader) { /* 
    return shaderProgram; /* Returning shaderProgram */
 }
 
-int main () {
-   initializePrograms(100, 100);
-   GLuint shaderProgram = shaders("./shader/vert.shader", "./shader/frag.shader");
+GLint createBuffers(GLuint &vboContainer, GLuint &vaoContainer, GLuint &shaderProgram, std::vector<GLfloat> const &colors, std::vector<GLfloat> const &vertices, std::vector<GLint> const &indices, bool const &dynamic=true) {  /* Sets up vao, vbo, and eab */
+   glGenVertexArrays(1, &vaoContainer); /* Generate vertax array object */
+   glBindVertexArray(vaoContainer);
+
+   glGenBuffers(1, &vboContainer); /* Generate vertex buffer object */
+   glBindBuffer(GL_ARRAY_BUFFER, vboContainer);
+
+   if (dynamic) {
+      glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (vertices.size() + colors.size()), NULL, GL_DYNAMIC_DRAW); /* Add data to buffer */
+   } else {
+      glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * (vertices.size() + colors.size()), NULL, GL_STATIC_DRAW); /* Add data to buffer */
+   }
+
+   glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(GLfloat) * vertices.size(), vertices.data());
+   glBufferSubData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertices.size(), sizeof(GLfloat) * colors.size(), colors.data());
+
+
+   GLint position_attribute = glGetAttribLocation(shaderProgram, "position"); /* Create position attribute */
+   GLint color_attribute = glGetAttribLocation(shaderProgram, "vert_color"); /* Create verticies color attribute */
+   GLint PVM = glGetUniformLocation(shaderProgram, "PVM"); /* Create player view model matrix */
+
+   glVertexAttribPointer(position_attribute, 3, GL_FLOAT, GL_FALSE, 0, 0); /* Create vert attribute pointer */ 
+   glVertexAttribPointer(color_attribute, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid *)(sizeof(GLfloat)*vertices.size())); /* Create vert attribute pointer */
+
+   glEnableVertexAttribArray(position_attribute); /* Enabling attribute array */
+   glEnableVertexAttribArray(color_attribute); /* Enabling attribute array */
+
+   GLuint eab;
+   glGenBuffers(1, &eab);
+
+   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, eab);
+   if (dynamic) {
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLint) * indices.size(), indices.data(), GL_DYNAMIC_DRAW);
+   } else {
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLint) * indices.size(), indices.data(), GL_STATIC_DRAW);
+   }
+   return PVM;
+}
+
+void draw(GLuint const &vbo, GLuint const &vao, GLint const &numberOfElements, GLenum const &type, glm::mat4 const &projection, glm::mat4 const &view, glm::mat4 const &model, GLint const &PVM) {
+   glUniformMatrix4fv(PVM, 1, GL_FALSE, glm::value_ptr(projection * view * model));
+   glBindVertexArray(vao);
+   glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+   glDrawElements(type, numberOfElements, GL_UNSIGNED_INT, 0);
+   glfwSwapBuffers();
+   glClear(GL_COLOR_BUFFER_BIT);
+
+   glfwPollEvents();
 }

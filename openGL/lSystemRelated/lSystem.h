@@ -15,7 +15,7 @@ struct lSysSymbol {
 
 typedef std::vector<lSysSymbol> lSysString;
 
-typedef std::function<void (std::vector<double>, lSysString*)> rule;
+typedef std::function<std::vector<lSysSymbol> (std::vector<double>, lSysString*)> rule;
 
 class lSystem {
 public:
